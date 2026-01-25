@@ -1,8 +1,9 @@
+
 # astorion
 
 Duckling-style parsing engine in Rust.
 
-[![CI](https://img.shields.io/badge/CI-not_configured-lightgrey)](#)
+[![CI](https://img.shields.io/github/actions/workflow/status/john-wennstrom/astorion/ci.yml?branch=main&label=CI)](https://github.com/john-wennstrom/astorion/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.85.0-blue)](#)
 [![Docs](https://img.shields.io/badge/docs-not_published-lightgrey)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -41,9 +42,10 @@ cargo build --release
 ./target/release/astorion "from 2:30 - 5:50"
 ```
 
+
 ## Status & guarantees
 
-- **Status:** alpha.
+- **Status:** alpha, CI ready.
 - **Stability:** a minimal public API is stabilized; see "Public API" below.
 - **MSRV:** 1.85.0 (see `rust-version` in `Cargo.toml`).
 - **Breaking changes:** allowed at any time while `0.x`.

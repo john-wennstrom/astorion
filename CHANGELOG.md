@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial changelog framework.
+- _Nothing yet._
 
 ### Changed
 
@@ -19,11 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - _Nothing yet._
 
-## [0.1.0] - YYYY-MM-DD
+## [0.4.0] - 2026-01-25
 
 ### Added
 
-- Initial public release (replace the date on first release).
+- Initial release after development. This is the first public release of astorion.
 
-[Unreleased]: https://github.com/<org>/<repo>/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/<org>/<repo>/releases/tag/v0.1.0
+[Unreleased]: https://github.com/john-wennstrom/astorion/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/john-wennstrom/astorion/releases/tag/v0.4.0

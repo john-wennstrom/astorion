@@ -1,0 +1,58 @@
+name: "Feature request"
+description: "Suggest an improvement or new capability"
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to propose an improvement.
+
+        For general questions/support, please use GitHub Discussions (enable Discussions in repo settings).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve? Why is it important?
+      placeholder: "I want to parse ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Astorion to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Provide concrete inputs and expected outputs (ideally matching Duckling semantics).
+      placeholder: |
+        Input: "..."
+        Expected: ...
+
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: Type of change
+      options:
+        - Bugfix (behavior is wrong today)
+        - New feature
+        - Refactor / maintenance
+        - Documentation
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / impact
+      description: Which dimensions/locales/parts of the engine would this touch?

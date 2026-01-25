@@ -1,0 +1,30 @@
+[package]
+categories = ["text-processing", "parsing"]
+description = "A Duckling-inspired, rule-based entity parsing engine in Rust, designed for extensible time and numeral parsing using a saturation-style pipeline."
+edition = "2024"
+keywords = [
+  "nlp",
+  "parser",
+  "entity-extraction",
+  "date-time",
+  "time-parsing",
+  "numeral-parsing",
+  "rule-based",
+  "saturation",
+  "ast",
+  "no-ml",
+  "deterministic",
+]
+license = "MIT"
+name = "astorion"
+readme = "README.md"
+repository = "https://github.com/john-wennstrom/astorion"
+rust-version = "1.85.0"
+version = "0.4.0"
+
+[dependencies]
+bitflags = "2.4"
+chrono = {version = "0.4.42", features = ["clock"]}
+chrono-english = "0.1.7"
+once_cell = "1.21.3"
+regex = "1.12.2"

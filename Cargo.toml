@@ -5,15 +5,9 @@ edition = "2024"
 keywords = [
   "nlp",
   "parser",
-  "entity-extraction",
-  "date-time",
-  "time-parsing",
-  "numeral-parsing",
   "rule-based",
   "saturation",
   "ast",
-  "no-ml",
-  "deterministic",
 ]
 license = "MIT"
 name = "astorion"

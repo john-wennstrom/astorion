@@ -3,10 +3,10 @@
 Duckling-style parsing engine in Rust.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/john-wennstrom/astorion/ci.yml?branch=main&label=CI)](https://github.com/john-wennstrom/astorion/actions)
-[![MSRV](https://img.shields.io/badge/MSRV-1.85.0-blue)](#)
-[![Docs](https://img.shields.io/badge/docs-not_published-lightgrey)](#)
+[![MSRV](https://img.shields.io/badge/MSRV-1.85.0-blue)](https://releases.rs/docs/1.85.0/)
+[![Docs](https://img.shields.io/docsrs/astorion)](https://docs.rs/astorion)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Crate](https://img.shields.io/badge/crates.io-TBD-lightgrey)](#)
+[![Crate](https://img.shields.io/crates/v/astorion.svg)](https://crates.io/crates/astorion)
 
 ## What is it?
 
@@ -50,10 +50,8 @@ cargo build --release
 
 ## Roadmap
 
-- Define a small stable public API (e.g. `parse(...) -> Vec<Entity>`).
-- Improve parity with Duckling semantics (resolution, span/ranking behavior).
+- Improve parity with Duckling semantics (span/ranking behavior).
 - Add locale scaffolding and additional dimensions.
-- Add CI, docs, and (eventually) publish a crate.
 
 ## Public API
 
@@ -89,13 +87,11 @@ MIT. See `LICENSE`.
 
 ## Installation
 
-Astorion is not published to crates.io yet.
-
-To use it locally as a dependency, add a path dependency:
+To use it as a dependency, add a path dependency:
 
 ```toml
 [dependencies]
-astorion = { path = "../astorion" }
+astorion = "0.4.0"
 ```
 
 ## CLI usage
@@ -116,14 +112,6 @@ cargo run -- --help
 | `--no-color`              | Disable ANSI color output.                                                                         |
 | `-h, --help`              | Show help text.                                                                                    |
 | `-V, --version`           | Print version information.                                                                         |
-
-### Exit codes
-
-| Code | Meaning                             |
-| ---- | ----------------------------------- |
-| `0`  | Success.                            |
-| `1`  | Internal error.                     |
-| `2`  | Invalid arguments or missing input. |
 
 Set `RUSTLING_DEBUG_RULES=1` to print rule filtering/production diagnostics.
 

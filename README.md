@@ -1,4 +1,3 @@
-
 # astorion
 
 Duckling-style parsing engine in Rust.
@@ -41,7 +40,6 @@ Or build a release binary:
 cargo build --release
 ./target/release/astorion "from 2:30 - 5:50"
 ```
-
 
 ## Status & guarantees
 

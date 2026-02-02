@@ -48,12 +48,12 @@ use super::compiled_rules::{
     BucketMask, CompiledRules, DimensionSet, RuleId,
 };
 use super::dedup::NodeKey;
-use super::metrics::{PassMetrics, RunMetrics, RunResult, SaturationMetrics};
+use super::metrics::{PassMetrics, RegexProfileSummary, RegexRuleProfile, RunMetrics, RunResult, SaturationMetrics};
 use super::resolve::resolve_node;
 use super::trigger::TriggerInfo;
 use crate::{Context, Dimension, Node, Options, Pattern, Range, ResolvedToken, Rule, Stash, Token, TokenKind};
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 // Move the parser/partial-match implementation to module scope so other modules
 // (for example `main.rs`) can construct and run the Parser directly.
@@ -232,11 +232,23 @@ impl<'a> Parser<'a> {
     /// Pattern::Regex("\\d+") -> Node at 10..11
     /// Pattern::Predicate(is_time) -> Nodes pulled from stash at same offset
     /// ```
-    fn lookup_item(&self, pat: &Pattern, position: usize) -> Vec<Node> {
+    fn lookup_item(
+        &self,
+        pat: &Pattern,
+        position: usize,
+        rule_name: &'static str,
+        profiler: &mut RegexProfiler,
+    ) -> Vec<Node> {
         match pat {
             Pattern::Regex(re) => {
                 let mut res = Vec::new();
+                let profiling = profiler.enabled();
+                let start = if profiling { Some(Instant::now()) } else { None };
+                let mut match_count: u64 = 0;
                 for caps in re.captures_iter(self.input) {
+                    if profiling {
+                        match_count += 1;
+                    }
                     let m = caps.get(0).unwrap();
                     if m.start() == position {
                         let groups: Vec<String> =
@@ -248,6 +260,9 @@ impl<'a> Parser<'a> {
                             evidence: Vec::new(),
                         });
                     }
+                }
+                if let Some(start) = start {
+                    profiler.record(rule_name, start.elapsed(), match_count);
                 }
                 res
             }
@@ -265,11 +280,17 @@ impl<'a> Parser<'a> {
     /// Used to seed partial matches for rules whose first pattern can match at
     /// any position. The regex branch scans the raw input, while the predicate
     /// branch leverages every node already in the stash.
-    fn lookup_item_anywhere(&self, pat: &Pattern) -> Vec<Node> {
+    fn lookup_item_anywhere(&self, pat: &Pattern, rule_name: &'static str, profiler: &mut RegexProfiler) -> Vec<Node> {
         match pat {
             Pattern::Regex(re) => {
                 let mut res = Vec::new();
+                let profiling = profiler.enabled();
+                let start = if profiling { Some(Instant::now()) } else { None };
+                let mut match_count: u64 = 0;
                 for caps in re.captures_iter(self.input) {
+                    if profiling {
+                        match_count += 1;
+                    }
                     let m = caps.get(0).unwrap();
                     let groups: Vec<String> =
                         (0..caps.len()).filter_map(|i| caps.get(i).map(|g| g.as_str().to_lowercase())).collect();
@@ -279,6 +300,9 @@ impl<'a> Parser<'a> {
                         rule_name: "<regex>",
                         evidence: Vec::new(),
                     });
+                }
+                if let Some(start) = start {
+                    profiler.record(rule_name, start.elapsed(), match_count);
                 }
                 res
             }
@@ -296,12 +320,12 @@ impl<'a> Parser<'a> {
     /// 1. find all Regex(A) hits
     /// 2. create PartialMatch for each, pointing next_idx to Predicate(B)
     /// ```
-    fn seed_first_pattern_anywhere(&self, rule: &'a Rule) -> Vec<PartialMatch<'a>> {
+    fn seed_first_pattern_anywhere(&self, rule: &'a Rule, profiler: &mut RegexProfiler) -> Vec<PartialMatch<'a>> {
         if rule.pattern.is_empty() {
             return Vec::new();
         }
         let first = &rule.pattern[0];
-        self.lookup_item_anywhere(first)
+        self.lookup_item_anywhere(first, rule.name, profiler)
             .into_iter()
             .map(|node| PartialMatch { rule, next_idx: 1, position: node.range.end, route: vec![node] })
             .collect()
@@ -319,7 +343,7 @@ impl<'a> Parser<'a> {
     ///   │                           │
     ///   └─ (backtracks)             └─ success -> collected
     /// ```
-    fn match_all(&self, input_matches: Vec<PartialMatch<'a>>) -> Vec<PartialMatch<'a>> {
+    fn match_all(&self, input_matches: Vec<PartialMatch<'a>>, profiler: &mut RegexProfiler) -> Vec<PartialMatch<'a>> {
         let mut results = Vec::new();
         let mut stack: Vec<PartialMatch<'a>> = input_matches;
 
@@ -331,7 +355,7 @@ impl<'a> Parser<'a> {
             }
 
             let pat = &m.rule.pattern[m.next_idx];
-            let nodes = self.lookup_item(pat, m.position);
+            let nodes = self.lookup_item(pat, m.position, m.rule.name, profiler);
 
             // For each matching node, create a new partial match
             // Push in reverse order so we explore them in forward order (stack is LIFO)
@@ -401,14 +425,14 @@ impl<'a> Parser<'a> {
     ///
     /// Designed to be called from `saturate` with different rule subsets to
     /// keep the staging clear in logs or profilers.
-    fn apply_rules_once(&self, rule_set: &[&Rule]) -> (Vec<Node>, usize, usize, usize) {
+    fn apply_rules_once(&self, rule_set: &[&Rule], profiler: &mut RegexProfiler) -> (Vec<Node>, usize, usize, usize) {
         let mut discovered = Vec::new();
         let debug = std::env::var_os("RUSTLING_DEBUG_RULES").is_some();
         let mut rules_seeded = 0;
         let mut regex_first_pattern_hits = 0;
 
         for rule in rule_set {
-            let starts = self.seed_first_pattern_anywhere(rule);
+            let starts = self.seed_first_pattern_anywhere(rule, profiler);
             let starts_count = starts.len();
 
             // Count seeded rules (those with at least one first-pattern match)
@@ -423,7 +447,7 @@ impl<'a> Parser<'a> {
             if debug && starts_count > 0 {
                 eprintln!("[rule:seed] name=\"{}\" initial_matches={}", rule.name, starts_count);
             }
-            let full = self.match_all(starts);
+            let full = self.match_all(starts, profiler);
             if debug && !full.is_empty() {
                 eprintln!("[rule:full_matches] name=\"{}\" count={}", rule.name, full.len());
             }
@@ -475,7 +499,7 @@ impl<'a> Parser<'a> {
     ///                │ predicate + regex passes
     ///                └── repeat until fixed point
     /// ```
-    fn saturate(&mut self) -> SaturationMetrics {
+    fn saturate(&mut self, profiler: &mut RegexProfiler) -> SaturationMetrics {
         let mut metrics = SaturationMetrics::default();
         let saturation_start = Instant::now();
         let debug = std::env::var_os("RUSTLING_DEBUG_RULES").is_some();
@@ -483,7 +507,7 @@ impl<'a> Parser<'a> {
         // Initial regex-first pass.
         let regex_start = Instant::now();
         let (discovered, rules_considered, rules_seeded, regex_first_pattern_hits) =
-            self.apply_rules_once(&self.regex_rules);
+            self.apply_rules_once(&self.regex_rules, profiler);
         let mut newly_added = Stash::empty();
         let mut produced = 0;
         for node in discovered {
@@ -523,7 +547,7 @@ impl<'a> Parser<'a> {
                 all_saturate_rules.iter().filter(|rule| Self::deps_satisfied(rule, dims_in_stash)).copied().collect();
 
             let (discovered, rules_considered, rules_seeded, regex_first_pattern_hits) =
-                self.apply_rules_once(&saturate_rules);
+                self.apply_rules_once(&saturate_rules, profiler);
             let mut newly_added = Stash::empty();
             let mut produced = 0;
             for node in discovered {
@@ -614,7 +638,8 @@ impl<'a> Parser<'a> {
     /// and return timing details.
     pub fn run_with_metrics(mut self, context: &Context, options: &Options) -> RunResult {
         let total_start = Instant::now();
-        let saturation = self.saturate();
+        let mut regex_profiler = RegexProfiler::new(options.regex_profiling.enabled);
+        let saturation = self.saturate(&mut regex_profiler);
         let resolve_start = Instant::now();
         let all_tokens = self.resolve_filtered(context, options);
         // Classifier deactivated for now - return all tokens
@@ -622,8 +647,9 @@ impl<'a> Parser<'a> {
         let tokens = all_tokens.clone();
         let resolve = resolve_start.elapsed();
         let total = total_start.elapsed();
+        let regex_profile = regex_profiler.finish(options.regex_profiling.max_rules);
 
-        RunResult { all_tokens, tokens, metrics: RunMetrics { total, saturation, resolve } }
+        RunResult { all_tokens, tokens, metrics: RunMetrics { total, saturation, resolve, regex_profile } }
     }
 
     /// Run the parser (saturate the stash and resolve nodes into `ResolvedToken`s).
@@ -634,5 +660,64 @@ impl<'a> Parser<'a> {
     #[allow(dead_code)]
     pub fn run(self, context: &Context, options: &Options) -> Vec<ResolvedToken> {
         self.run_with_metrics(context, options).tokens
+    }
+}
+
+#[derive(Default)]
+struct RegexRuleStats {
+    evaluations: u64,
+    matches: u64,
+    total_time: Duration,
+}
+
+struct RegexProfiler {
+    enabled: bool,
+    total_time: Duration,
+    total_matches: u64,
+    stats: HashMap<&'static str, RegexRuleStats>,
+}
+
+impl RegexProfiler {
+    fn new(enabled: bool) -> Self {
+        Self { enabled, total_time: Duration::ZERO, total_matches: 0, stats: HashMap::new() }
+    }
+
+    fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn record(&mut self, rule_name: &'static str, elapsed: Duration, matches: u64) {
+        if !self.enabled {
+            return;
+        }
+        let entry = self.stats.entry(rule_name).or_default();
+        entry.evaluations += 1;
+        entry.matches += matches;
+        entry.total_time += elapsed;
+        self.total_time += elapsed;
+        self.total_matches += matches;
+    }
+
+    fn finish(self, max_rules: usize) -> Option<RegexProfileSummary> {
+        if !self.enabled || self.stats.is_empty() {
+            return None;
+        }
+
+        let mut per_rule: Vec<(&'static str, RegexRuleStats)> = self.stats.into_iter().collect();
+        per_rule.sort_by(|(_, a), (_, b)| b.total_time.cmp(&a.total_time));
+
+        let limit = max_rules.max(1);
+        let rules = per_rule
+            .into_iter()
+            .take(limit)
+            .map(|(rule, stats)| RegexRuleProfile {
+                rule,
+                evaluations: stats.evaluations,
+                matches: stats.matches,
+                total_time: stats.total_time,
+            })
+            .collect();
+
+        Some(RegexProfileSummary { total_time: self.total_time, total_matches: self.total_matches, rules })
     }
 }

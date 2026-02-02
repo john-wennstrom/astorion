@@ -16,7 +16,10 @@ fn main() {
     };
 
     let ctx = Context { reference_time: config.reference_time };
-    let opts = Options {};
+    let mut opts = Options::default();
+    if config.regex_profile {
+        opts.enable_regex_profiling_mut();
+    }
     let res = parse_verbose_with(&config.input, &ctx, &opts);
     debug_report::print_run(&config.input, &res.details, config.color);
 }
@@ -25,12 +28,14 @@ struct CliConfig {
     input: String,
     reference_time: NaiveDateTime,
     color: bool,
+    regex_profile: bool,
 }
 
 fn parse_args() -> Result<CliConfig, String> {
     let mut input: Option<String> = None;
     let mut reference_time = parse_reference(DEFAULT_REFERENCE)?;
     let mut color = io::stdout().is_terminal();
+    let mut regex_profile = false;
     let mut args = std::env::args().skip(1).peekable();
 
     while let Some(arg) = args.next() {
@@ -45,6 +50,7 @@ fn parse_args() -> Result<CliConfig, String> {
             }
             "--color" => color = true,
             "--no-color" => color = false,
+            "--regex-profile" => regex_profile = true,
             "--reference" => {
                 let value = args.next().ok_or_else(|| "error: --reference expects a value".to_string())?;
                 reference_time = parse_reference(&value)?;
@@ -100,7 +106,7 @@ fn parse_args() -> Result<CliConfig, String> {
         return Err(format!("error: no input provided\n\n{}", help_text()));
     }
 
-    Ok(CliConfig { input, reference_time, color })
+    Ok(CliConfig { input, reference_time, color, regex_profile })
 }
 
 fn read_stdin_input() -> Result<String, String> {
@@ -135,6 +141,7 @@ Options:
                              Default: {default_reference}
   --color                    Force ANSI color output.
   --no-color                 Disable ANSI color output.
+    --regex-profile            Collect regex timing stats (slower; CLI only).
   -h, --help                 Show this help message.
   -V, --version              Print version information.
 

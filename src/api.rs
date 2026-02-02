@@ -1,4 +1,5 @@
 use crate::engine;
+use crate::engine::RegexProfileSummary;
 use crate::{Dimension, ResolvedToken, Rule};
 use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
 use once_cell::sync::Lazy;
@@ -29,11 +30,50 @@ impl Default for Context {
 
 /// Options that affect parsing/resolution behavior.
 ///
-/// This is intentionally minimal today and will grow as more Duckling-like
-/// configuration is implemented.
+/// This now includes optional regex profiling controls.
 #[derive(Debug, Clone, Default)]
 pub struct Options {
-    // later: debug flags, locale, timezone, etc.
+    /// Regex profiling configuration (disabled by default).
+    pub regex_profiling: RegexProfilingOptions,
+}
+
+impl Options {
+    /// Enable regex profiling (chain with [`with_regex_profile_limit`] to adjust the report size).
+    pub fn enable_regex_profiling(mut self) -> Self {
+        self.regex_profiling.enabled = true;
+        self
+    }
+
+    /// Set the maximum number of regex-heavy rules included in the summary.
+    pub fn with_regex_profile_limit(mut self, max_rules: usize) -> Self {
+        self.regex_profiling.max_rules = max_rules.max(1);
+        self
+    }
+
+    /// Mutably enable regex profiling without consuming the options value.
+    pub fn enable_regex_profiling_mut(&mut self) {
+        self.regex_profiling.enabled = true;
+    }
+
+    /// Mutably configure the rule limit for regex profiling summaries.
+    pub fn set_regex_profile_limit(&mut self, max_rules: usize) {
+        self.regex_profiling.max_rules = max_rules.max(1);
+    }
+}
+
+/// Regex profiling configuration toggled via [`Options`].
+#[derive(Debug, Clone)]
+pub struct RegexProfilingOptions {
+    /// When true, the parser records regex evaluation stats per rule.
+    pub enabled: bool,
+    /// Maximum number of expensive regex rules to surface in the summary.
+    pub max_rules: usize,
+}
+
+impl Default for RegexProfilingOptions {
+    fn default() -> Self {
+        Self { enabled: false, max_rules: 5 }
+    }
 }
 
 /// A resolved entity found in input.
@@ -103,6 +143,8 @@ pub struct ParseDetails {
     pub active_rules: Vec<String>,
     /// All resolved candidates before classifier filtering.
     pub all_candidates: Vec<Entity>,
+    /// Optional regex profiling summary (only present when enabled in [`Options`]).
+    pub regex_profile: Option<RegexProfileSummary>,
 }
 
 /// Result from [`parse_verbose`] and [`parse_verbose_with`].
@@ -185,6 +227,7 @@ pub fn parse_verbose_with(text: &str, context: &Context, options: &Options) -> P
         resolve: run.metrics.resolve,
         active_rules,
         all_candidates,
+        regex_profile: run.metrics.regex_profile.clone(),
     };
 
     ParseResultVerbose { text: text.to_string(), results, elapsed: run.metrics.total, details }
@@ -267,5 +310,20 @@ mod tests {
         assert_eq!(res.elapsed, res.details.total);
         assert!(res.details.saturation_total <= res.details.total);
         assert!(!res.details.active_rules.is_empty());
+        assert!(res.details.regex_profile.is_none());
+    }
+
+    #[test]
+    fn regex_profiling_summary_present_when_enabled() {
+        let ctx = reference_context();
+        let mut opts = Options::default();
+        opts.enable_regex_profiling_mut();
+
+        let res = parse_verbose_with("today", &ctx, &opts);
+        let profile = res.details.regex_profile.expect("expected regex profile summary");
+
+        assert!(profile.total_time >= Duration::ZERO);
+        assert!(profile.total_matches > 0);
+        assert!(!profile.rules.is_empty());
     }
 }

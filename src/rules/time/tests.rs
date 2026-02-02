@@ -863,7 +863,7 @@ fn time_examples_matching() {
     let ctx = reference_context();
 
     for (expected, input) in cases {
-        let opts = Options {};
+        let opts = Options::default();
 
         let parser = crate::engine::Parser::new(input, &rules);
         let resolved = parser.run(&ctx, &opts);

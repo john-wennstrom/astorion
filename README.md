@@ -110,10 +110,11 @@ cargo run -- --help
 | `--reference <timestamp>` | Reference time in `YYYY-MM-DDTHH:MM:SS` (default: `2013-02-12T04:30:00`).                          |
 | `--color`                 | Force ANSI color output.                                                                           |
 | `--no-color`              | Disable ANSI color output.                                                                         |
+| `--regex-profile`         | Collect regex timing stats and print a profiling summary (adds overhead). See `docs/regex-profiling.md` for guidance. |
 | `-h, --help`              | Show help text.                                                                                    |
 | `-V, --version`           | Print version information.                                                                         |
 
-Set `RUSTLING_DEBUG_RULES=1` to print rule filtering/production diagnostics.
+Set `RUSTLING_DEBUG_RULES=1` to print rule filtering/production diagnostics. Detailed tips for interpreting the regex profiling report live in `docs/regex-profiling.md`.
 
 ## How it works
 

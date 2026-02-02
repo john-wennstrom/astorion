@@ -42,6 +42,11 @@ pub fn print_run(input: &str, details: &ParseDetails, color: bool) {
     println!("\n{}", palette.paint("━━━ Saturation ━━━", ansi::GRAY));
     print_saturation(details, &palette);
 
+    if details.regex_profile.is_some() {
+        println!("\n{}", palette.paint("━━━ Regex Profiling ━━━", ansi::GRAY));
+        print_regex_profile(details, &palette);
+    }
+
     // Results
     println!("\n{}", palette.paint("━━━ Results ━━━", ansi::GRAY));
     if details.all_candidates.is_empty() {
@@ -105,6 +110,35 @@ fn print_results(details: &ParseDetails, palette: &ansi::Palette) {
             palette.paint(&ent.name, ansi::BLUE),
             palette.dim("│ rule:"),
             palette.paint(&ent.rule, ansi::CYAN)
+        );
+    }
+}
+
+fn print_regex_profile(details: &ParseDetails, palette: &ansi::Palette) {
+    let Some(profile) = &details.regex_profile else {
+        return;
+    };
+
+    println!(
+        "  Total regex time: {}  │  Matches: {}",
+        palette.paint(format!("{:?}", profile.total_time), ansi::GREEN),
+        palette.paint(profile.total_matches.to_string(), ansi::BLUE)
+    );
+
+    if profile.rules.is_empty() {
+        println!("  {}", palette.dim("No regex rules executed"));
+        return;
+    }
+
+    for rule in &profile.rules {
+        println!(
+            "  {} {}  {} {}  {} {}",
+            palette.paint(rule.rule, ansi::CYAN),
+            palette.dim(format!("{:?}", rule.total_time)),
+            palette.dim("evals:"),
+            palette.paint(rule.evaluations.to_string(), ansi::YELLOW),
+            palette.dim("matches:"),
+            palette.paint(rule.matches.to_string(), ansi::YELLOW)
         );
     }
 }

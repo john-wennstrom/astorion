@@ -88,7 +88,7 @@ mod trigger;
 #[allow(unused_imports)]
 pub use compiled_rules::{BucketMask, CompiledRules, DimensionSet, RuleIndex, RuleMeta};
 #[allow(unused_imports)]
-pub use metrics::{PassMetrics, RunMetrics, RunResult, SaturationMetrics};
+pub use metrics::{PassMetrics, RegexProfileSummary, RegexRuleProfile, RunMetrics, RunResult, SaturationMetrics};
 #[allow(unused_imports)]
 pub use parser::Parser;
 #[allow(unused_imports)]

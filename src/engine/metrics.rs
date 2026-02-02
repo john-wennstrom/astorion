@@ -33,6 +33,8 @@ pub struct RunMetrics {
     pub saturation: SaturationMetrics,
     /// Time spent resolving tokens after saturation.
     pub resolve: Duration,
+    /// Regex profiling summary collected when profiling is enabled.
+    pub regex_profile: Option<RegexProfileSummary>,
 }
 
 /// Timings for the saturation phase.
@@ -61,6 +63,30 @@ pub struct PassMetrics {
     pub _rules_seeded: usize,
     /// Number of regex first-pattern hits across all rules.
     pub _regex_first_pattern_hits: usize,
+}
+
+/// Aggregated regex profiling details for the most expensive rules.
+#[derive(Debug, Clone, Default)]
+pub struct RegexProfileSummary {
+    /// Total wall-clock time spent evaluating regex patterns.
+    pub total_time: Duration,
+    /// Total number of matches observed across all regex evaluations.
+    pub total_matches: u64,
+    /// Per-rule breakdown (sorted by descending total_time).
+    pub rules: Vec<RegexRuleProfile>,
+}
+
+/// Regex profiling stats for a single rule.
+#[derive(Debug, Clone)]
+pub struct RegexRuleProfile {
+    /// Name of the rule.
+    pub rule: &'static str,
+    /// Number of times regex patterns within this rule were evaluated.
+    pub evaluations: u64,
+    /// Total number of matches produced by those evaluations.
+    pub matches: u64,
+    /// Cumulative time spent evaluating regex patterns for this rule.
+    pub total_time: Duration,
 }
 
 /// Parser output bundled with timing information.

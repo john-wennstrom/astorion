@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- _Nothing yet._
+- Optional regex profiling mode gated by `Options::regex_profiling`, including CLI reporting of total regex time, match counts, and the heaviest rules when enabled.
+- `--regex-profile` CLI flag to toggle profiling without code changes.
 
 ### Changed
 

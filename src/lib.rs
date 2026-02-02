@@ -11,7 +11,8 @@ mod rules;
 mod time_expr;
 
 pub use api::{
-    Context, Entity, NodeSummary, Options, ParseDetails, ParseResult, parse, parse_verbose_with, parse_with,
+    Context, Entity, NodeSummary, Options, ParseDetails, ParseResult, RegexProfilingOptions, parse,
+    parse_verbose_with, parse_with,
 };
 
 use crate::time_expr::TimeExpr;

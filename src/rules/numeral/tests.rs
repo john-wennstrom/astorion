@@ -117,7 +117,7 @@ fn numeral_examples_matching() {
 
     for (expected, input) in cases {
         let ctx = Context::default();
-        let opts = Options {};
+        let opts = Options::default();
 
         // Run the full parser (like `main.rs`) so composite rules can fire.
         let parser = crate::engine::Parser::new(input, &rules);

@@ -21,4 +21,4 @@ bitflags = "2.4"
 chrono = {version = "0.4.42", features = ["clock"]}
 chrono-english = "0.1.7"
 once_cell = "1.21.3"
-regex = "1.12.2"
+regex = "1.12.3"
